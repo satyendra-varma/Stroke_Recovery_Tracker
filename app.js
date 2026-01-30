@@ -481,7 +481,7 @@ function updateCharts() {
     sugarChart.update();
 }
 
-// Export to CSV
+// Export to CSV - All Entries
 function exportToCSV() {
     if (healthData.length === 0) {
         alert('No data to export!');
@@ -517,13 +517,159 @@ function exportToCSV() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `health_data_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `health_data_all_entries_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     
-    showSuccess('CSV file downloaded successfully!');
+    showSuccess('All entries CSV downloaded successfully!');
+}
+
+// Export Doctor Report - Daily Summary
+function exportDoctorReport() {
+    if (healthData.length === 0) {
+        alert('No data to export!');
+        return;
+    }
+    
+    // Aggregate data by day
+    const dailyData = aggregateDataByDay();
+    
+    const headers = [
+        'Date', 
+        'Avg Systolic', 
+        'Avg Diastolic', 
+        'Avg Blood Sugar', 
+        'Morning Meds Taken', 
+        'Morning Time', 
+        'Noon Meds Taken', 
+        'Noon Time', 
+        'Night Meds Taken', 
+        'Night Time', 
+        'Total Water (glasses)', 
+        'Total Water (ml)', 
+        'Medication Adherence (%)',
+        'Daily Notes',
+        'BP Readings Count',
+        'Sugar Readings Count'
+    ];
+    
+    const rows = Object.entries(dailyData).map(([date, data]) => {
+        const medAdherence = ((data.morningTaken + data.noonTaken + data.nightTaken) / 3 * 100).toFixed(1);
+        
+        return [
+            date,
+            data.avgSystolic > 0 ? data.avgSystolic.toFixed(1) : 'N/A',
+            data.avgDiastolic > 0 ? data.avgDiastolic.toFixed(1) : 'N/A',
+            data.avgBloodSugar > 0 ? data.avgBloodSugar.toFixed(1) : 'N/A',
+            data.morningTaken ? 'Yes' : 'No',
+            data.morningTime || '',
+            data.noonTaken ? 'Yes' : 'No',
+            data.noonTime || '',
+            data.nightTaken ? 'Yes' : 'No',
+            data.nightTime || '',
+            data.totalWater,
+            data.totalWater * 250,
+            `${medAdherence}%`,
+            `"${(data.notes || '').replace(/"/g, '""')}"`,
+            data.bpReadings,
+            data.sugarReadings
+        ];
+    });
+    
+    const csvContent = [headers, ...rows]
+        .map(row => row.join(','))
+        .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `doctor_report_daily_summary_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showSuccess('Doctor Report (Daily Summary) downloaded successfully!');
+}
+
+// Aggregate health data by day
+function aggregateDataByDay() {
+    const dailyAggregated = {};
+    
+    healthData.forEach(entry => {
+        const date = new Date(entry.timestamp).toLocaleDateString();
+        
+        if (!dailyAggregated[date]) {
+            dailyAggregated[date] = {
+                systolicSum: 0,
+                diastolicSum: 0,
+                bloodSugarSum: 0,
+                bpReadings: 0,
+                sugarReadings: 0,
+                totalWater: 0,
+                morningTaken: false,
+                noonTaken: false,
+                nightTaken: false,
+                morningTime: null,
+                noonTime: null,
+                nightTime: null,
+                notes: []
+            };
+        }
+        
+        const dayData = dailyAggregated[date];
+        
+        // Aggregate vitals (only count non-zero values)
+        if (entry.systolic && entry.systolic > 0) {
+            dayData.systolicSum += entry.systolic;
+            dayData.diastolicSum += entry.diastolic;
+            dayData.bpReadings++;
+        }
+        
+        if (entry.bloodSugar && entry.bloodSugar > 0) {
+            dayData.bloodSugarSum += entry.bloodSugar;
+            dayData.sugarReadings++;
+        }
+        
+        // Aggregate water intake
+        if (entry.waterIntake && entry.waterIntake > 0) {
+            dayData.totalWater += entry.waterIntake;
+        }
+        
+        // Aggregate medication data
+        if (entry.medMorning) {
+            dayData.morningTaken = true;
+            if (entry.morningTime) dayData.morningTime = entry.morningTime;
+        }
+        if (entry.medNoon) {
+            dayData.noonTaken = true;
+            if (entry.noonTime) dayData.noonTime = entry.noonTime;
+        }
+        if (entry.medNight) {
+            dayData.nightTaken = true;
+            if (entry.nightTime) dayData.nightTime = entry.nightTime;
+        }
+        
+        // Collect notes
+        if (entry.winsNotes && entry.winsNotes.trim()) {
+            dayData.notes.push(entry.winsNotes);
+        }
+    });
+    
+    // Calculate averages and format final data
+    Object.keys(dailyAggregated).forEach(date => {
+        const dayData = dailyAggregated[date];
+        
+        dayData.avgSystolic = dayData.bpReadings > 0 ? dayData.systolicSum / dayData.bpReadings : 0;
+        dayData.avgDiastolic = dayData.bpReadings > 0 ? dayData.diastolicSum / dayData.bpReadings : 0;
+        dayData.avgBloodSugar = dayData.sugarReadings > 0 ? dayData.bloodSugarSum / dayData.sugarReadings : 0;
+        dayData.notes = dayData.notes.join('; ');
+    });
+    
+    return dailyAggregated;
 }
 
 // Emergency call
