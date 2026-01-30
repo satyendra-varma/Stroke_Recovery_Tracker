@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stroke Recovery Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .medical-theme { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .btn-large { padding: 1rem 1.5rem; font-size: 1.1rem; }
+        .emergency-btn { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .vital-normal { color: #10b981; }
+        .vital-warning { color: #f59e0b; }
+        .vital-danger { color: #ef4444; }
+        .countdown-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="medical-theme text-white p-6 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-3xl font-bold text-center">
+                <i class="fas fa-heartbeat mr-2"></i>
+                Stroke Recovery Tracker
+            </h1>
+            <p class="text-center mt-2 opacity-90">Track your daily health progress</p>
+        </div>
+    </header>
+
+    <!-- Wedding Countdown -->
+    <div class="container mx-auto p-4 mt-6">
+        <div class="countdown-card rounded-xl p-6 text-center card-shadow">
+            <h2 class="text-2xl font-bold mb-2">
+                <i class="fas fa-ring mr-2"></i>
+                Wedding Countdown
+            </h2>
+            <div class="text-4xl font-bold" id="weddingCountdown">Loading...</div>
+            <p class="mt-2 opacity-90">March 14th, 2026</p>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-2 flex flex-wrap">
+            <button onclick="showTab('entry')" id="entryTab" class="flex-1 btn-large bg-blue-600 text-white rounded-lg m-1 hover:bg-blue-700 transition">
+                <i class="fas fa-plus-circle mr-2"></i>Add Entry
+            </button>
+            <button onclick="showTab('history')" id="historyTab" class="flex-1 btn-large bg-gray-200 text-gray-700 rounded-lg m-1 hover:bg-gray-300 transition">
+                <i class="fas fa-chart-line mr-2"></i>View History
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Entry Form -->
+    <div id="entrySection" class="container mx-auto p-4">
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                <i class="fas fa-clipboard-list mr-2"></i>
+                Daily Health Entry
+            </h2>
+            
+            <form id="healthForm" class="space-y-6">
+                <!-- Blood Pressure -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-heart mr-2"></i>Blood Pressure
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Systolic (mmHg)</label>
+                            <input type="number" id="systolic" min="60" max="200" required
+                                   class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                                   placeholder="120">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Diastolic (mmHg)</label>
+                            <input type="number" id="diastolic" min="40" max="130" required
+                                   class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                                   placeholder="80">
+                        </div>
+                    </div>
+                    <div id="bpAlert" class="mt-2 text-sm font-medium"></div>
+                </div>
+
+                <!-- Blood Sugar -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-tint mr-2"></i>Blood Sugar (mg/dL)
+                    </label>
+                    <input type="number" id="bloodSugar" min="50" max="400" required
+                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                           placeholder="100">
+                    <div id="sugarAlert" class="mt-2 text-sm font-medium"></div>
+                </div>
+
+                <!-- Medication Checklist -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-pills mr-2"></i>Medication Taken
+                    </label>
+                    <div class="space-y-3">
+                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
+                            <input type="checkbox" id="medMorning" class="mr-3 w-5 h-5 text-blue-600">
+                            <span class="text-lg">Morning Medications</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
+                            <input type="checkbox" id="medNoon" class="mr-3 w-5 h-5 text-blue-600">
+                            <span class="text-lg">Noon Medications</span>
+                        </label>
+                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
+                            <input type="checkbox" id="medNight" class="mr-3 w-5 h-5 text-blue-600">
+                            <span class="text-lg">Night Medications</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Wins/Notes -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-star mr-2"></i>Today's Wins & Notes
+                    </label>
+                    <textarea id="winsNotes" rows="4" required
+                              class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg resize-none"
+                              placeholder="Describe today's progress, improvements, or any concerns..."></textarea>
+                </div>
+
+                <!-- Photo Upload (Optional) -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-camera mr-2"></i>Photo (Optional)
+                    </label>
+                    <input type="file" id="photoUpload" accept="image/*" capture="camera"
+                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg">
+                    <p class="text-sm text-gray-600 mt-2">Upload a photo of prescription or BP machine reading</p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full btn-large bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                    <i class="fas fa-save mr-2"></i>Save Entry
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Dashboard -->
+    <div id="historySection" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-xl card-shadow p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Health History
+                </h2>
+                <button onclick="exportToCSV()" class="btn-large bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-download mr-2"></i>Export CSV
+                </button>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Blood Pressure Trends</h3>
+                    <canvas id="bpChart"></canvas>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Blood Sugar Trends</h3>
+                    <canvas id="sugarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Entries -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-gray-700">Recent Entries</h3>
+                <div id="recentEntries" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">No entries yet. Start tracking your health!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Button -->
+    <button onclick="callEmergency()" class="emergency-btn bg-red-600 text-white rounded-full p-4 shadow-lg hover:bg-red-700 transition">
+        <i class="fas fa-phone-alt text-2xl"></i>
+    </button>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg hidden z-50">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span id="successText">Entry saved successfully!</span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
