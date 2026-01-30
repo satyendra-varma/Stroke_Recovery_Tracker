@@ -2,10 +2,18 @@
 let healthData = [];
 let bpChart = null;
 let sugarChart = null;
+let waterIntake = 0;
+let medicationTimes = {
+    morning: null,
+    noon: null,
+    night: null
+};
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     loadData();
+    loadDailyData();
+    checkDailyReset();
     // updateWeddingCountdown(); // Commented out
     // setInterval(updateWeddingCountdown, 60000); // Commented out
     
@@ -19,6 +27,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize charts
     initCharts();
+    
+    // Update water display
+    updateWaterDisplay();
+    
+    // Set up manual time input listeners
+    ['morning', 'noon', 'night'].forEach(period => {
+        const manualInput = document.getElementById(`${period}TimeManual`);
+        if (manualInput) {
+            manualInput.addEventListener('change', function() {
+                if (this.value) {
+                    medicationTimes[period] = this.value;
+                    updateMedTimeDisplay(period);
+                    document.getElementById(`med${period.charAt(0).toUpperCase() + period.slice(1)}`).checked = true;
+                }
+            });
+        }
+    });
 });
 
 // Tab navigation
@@ -47,22 +72,129 @@ function showTab(tab) {
     }
 }
 
-// Wedding countdown
-function updateWeddingCountdown() {
-    const weddingDate = new Date('2026-03-14T00:00:00');
-    const now = new Date();
-    const diff = weddingDate - now;
+// Water intake tracking
+function updateWaterIntake(change) {
+    waterIntake = Math.max(0, waterIntake + change);
+    updateWaterDisplay();
+    saveDailyData();
+}
+
+function updateWaterDisplay() {
+    document.getElementById('waterCount').textContent = waterIntake;
+    document.getElementById('waterTotal').textContent = `${waterIntake * 250}ml`;
+}
+
+// Medication time tracking
+function updateMedTime(period) {
+    const checkbox = document.getElementById(`med${period.charAt(0).toUpperCase() + period.slice(1)}`);
+    const manualInput = document.getElementById(`${period}TimeManual`);
     
-    if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        
-        document.getElementById('weddingCountdown').innerHTML = 
-            `${days}d ${hours}h ${minutes}m`;
+    if (checkbox.checked) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
+        medicationTimes[period] = timeString;
+        manualInput.value = timeString;
     } else {
-        document.getElementById('weddingCountdown').innerHTML = '🎉 Wedding Day! 🎉';
+        medicationTimes[period] = null;
+        manualInput.value = '';
     }
+    
+    updateMedTimeDisplay(period);
+    saveDailyData();
+}
+
+function updateMedTimeDisplay(period) {
+    const display = document.getElementById(`${period}Time`);
+    if (medicationTimes[period]) {
+        const time = medicationTimes[period];
+        const [hours, minutes] = time.split(':');
+        const hour12 = parseInt(hours) > 12 ? parseInt(hours) - 12 : parseInt(hours);
+        const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
+        display.textContent = `Taken at ${hour12}:${minutes} ${ampm}`;
+        display.className = 'text-sm text-green-600 font-medium';
+    } else {
+        display.textContent = 'Not taken';
+        display.className = 'text-sm text-gray-600';
+    }
+}
+
+// Daily data management
+function saveDailyData() {
+    const dailyData = {
+        date: new Date().toDateString(),
+        waterIntake: waterIntake,
+        medicationTimes: medicationTimes
+    };
+    localStorage.setItem('dailyHealthData', JSON.stringify(dailyData));
+}
+
+function loadDailyData() {
+    const stored = localStorage.getItem('dailyHealthData');
+    if (stored) {
+        const dailyData = JSON.parse(stored);
+        if (dailyData.date === new Date().toDateString()) {
+            waterIntake = dailyData.waterIntake || 0;
+            medicationTimes = dailyData.medicationTimes || { morning: null, noon: null, night: null };
+            
+            // Update UI
+            updateWaterDisplay();
+            ['morning', 'noon', 'night'].forEach(period => {
+                if (medicationTimes[period]) {
+                    document.getElementById(`med${period.charAt(0).toUpperCase() + period.slice(1)}`).checked = true;
+                    document.getElementById(`${period}TimeManual`).value = medicationTimes[period];
+                    updateMedTimeDisplay(period);
+                }
+            });
+        }
+    }
+}
+
+function checkDailyReset() {
+    const stored = localStorage.getItem('dailyHealthData');
+    if (stored) {
+        const dailyData = JSON.parse(stored);
+        if (dailyData.date !== new Date().toDateString()) {
+            // Save yesterday's data to history before reset
+            if (dailyData.waterIntake > 0 || Object.values(dailyData.medicationTimes).some(time => time !== null)) {
+                saveYesterdayData(dailyData);
+            }
+            // Reset for new day
+            waterIntake = 0;
+            medicationTimes = { morning: null, noon: null, night: null };
+            updateWaterDisplay();
+            ['morning', 'noon', 'night'].forEach(period => {
+                document.getElementById(`med${period.charAt(0).toUpperCase() + period.slice(1)}`).checked = false;
+                document.getElementById(`${period}TimeManual`).value = '';
+                updateMedTimeDisplay(period);
+            });
+            saveDailyData();
+        }
+    }
+}
+
+function saveYesterdayData(yesterdayData) {
+    const yesterdayEntry = {
+        id: Date.now() - 86400000, // Yesterday's timestamp
+        timestamp: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+        systolic: 0,
+        diastolic: 0,
+        bloodSugar: 0,
+        medMorning: yesterdayData.medicationTimes.morning !== null,
+        medNoon: yesterdayData.medicationTimes.noon !== null,
+        medNight: yesterdayData.medicationTimes.night !== null,
+        morningTime: yesterdayData.medicationTimes.morning,
+        noonTime: yesterdayData.medicationTimes.noon,
+        nightTime: yesterdayData.medicationTimes.night,
+        waterIntake: yesterdayData.waterIntake,
+        winsNotes: `Auto-saved: ${yesterdayData.waterIntake} glasses of water, medications taken: ${Object.values(yesterdayData.medicationTimes).filter(t => t !== null).length}/3`,
+        photo: null
+    };
+    healthData.push(yesterdayEntry);
+    saveData();
 }
 
 // Form validation
@@ -122,6 +254,10 @@ function handleSubmit(e) {
         medMorning: document.getElementById('medMorning').checked,
         medNoon: document.getElementById('medNoon').checked,
         medNight: document.getElementById('medNight').checked,
+        morningTime: medicationTimes.morning,
+        noonTime: medicationTimes.noon,
+        nightTime: medicationTimes.night,
+        waterIntake: waterIntake,
         winsNotes: document.getElementById('winsNotes').value,
         photo: null // Will handle photo upload separately
     };
@@ -192,6 +328,7 @@ function updateHistory() {
                           entry.bloodSugar > 140 || entry.bloodSugar < 70 ? 'vital-warning' : 'vital-normal';
         
         const medsTaken = [entry.medMorning, entry.medNoon, entry.medNight].filter(Boolean).length;
+        const waterIntake = entry.waterIntake || 0;
         
         return `
             <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
@@ -204,21 +341,28 @@ function updateHistory() {
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                         <span class="font-medium">BP:</span>
-                        <span class="${bpClass} font-bold ml-1">${entry.systolic}/${entry.diastolic}</span>
+                        <span class="${bpClass} font-bold ml-1">${entry.systolic || '-'}/${entry.diastolic || '-'}</span>
                     </div>
                     <div>
                         <span class="font-medium">Sugar:</span>
-                        <span class="${sugarClass} font-bold ml-1">${entry.bloodSugar} mg/dL</span>
+                        <span class="${sugarClass} font-bold ml-1">${entry.bloodSugar || '-'} mg/dL</span>
                     </div>
                     <div>
                         <span class="font-medium">Meds:</span>
                         <span class="ml-1">${medsTaken}/3 doses</span>
                     </div>
                     <div>
-                        <span class="font-medium">Notes:</span>
-                        <span class="ml-1 text-gray-600 truncate">${entry.winsNotes.substring(0, 30)}...</span>
+                        <span class="font-medium">Water:</span>
+                        <span class="ml-1 text-blue-600">${waterIntake} glasses</span>
                     </div>
                 </div>
+                ${entry.morningTime || entry.noonTime || entry.nightTime ? `
+                <div class="mt-2 text-xs text-gray-600">
+                    <span class="font-medium">Med Times:</span>
+                    ${entry.morningTime ? ` Morning: ${entry.morningTime}` : ''}
+                    ${entry.noonTime ? ` Noon: ${entry.noonTime}` : ''}
+                    ${entry.nightTime ? ` Night: ${entry.nightTime}` : ''}
+                </div>` : ''}
                 ${entry.photo ? '<div class="mt-2"><span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">📷 Photo attached</span></div>' : ''}
             </div>
         `;
@@ -344,19 +488,24 @@ function exportToCSV() {
         return;
     }
     
-    const headers = ['Date', 'Time', 'Systolic', 'Diastolic', 'Blood Sugar', 'Morning Meds', 'Noon Meds', 'Night Meds', 'Wins/Notes'];
+    const headers = ['Date', 'Time', 'Systolic', 'Diastolic', 'Blood Sugar', 'Morning Meds', 'Morning Time', 'Noon Meds', 'Noon Time', 'Night Meds', 'Night Time', 'Water Intake (glasses)', 'Water Intake (ml)', 'Wins/Notes'];
     const rows = healthData.map(entry => {
         const date = new Date(entry.timestamp);
         return [
             date.toLocaleDateString(),
             date.toLocaleTimeString(),
-            entry.systolic,
-            entry.diastolic,
-            entry.bloodSugar,
+            entry.systolic || '',
+            entry.diastolic || '',
+            entry.bloodSugar || '',
             entry.medMorning ? 'Yes' : 'No',
+            entry.morningTime || '',
             entry.medNoon ? 'Yes' : 'No',
+            entry.noonTime || '',
             entry.medNight ? 'Yes' : 'No',
-            `"${entry.winsNotes.replace(/"/g, '""')}"`
+            entry.nightTime || '',
+            entry.waterIntake || 0,
+            (entry.waterIntake || 0) * 250,
+            `"${(entry.winsNotes || '').replace(/"/g, '""')}"`
         ];
     });
     
