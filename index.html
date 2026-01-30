@@ -99,6 +99,26 @@
                     <div id="bpAlert" class="mt-2 text-sm font-medium"></div>
                 </div>
 
+                <!-- Water Intake Tracker -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <label class="block text-lg font-semibold mb-3 text-gray-700">
+                        <i class="fas fa-tint mr-2"></i>Water Intake (250ml per glass)
+                    </label>
+                    <div class="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-gray-200">
+                        <button type="button" onclick="updateWaterIntake(-1)" class="bg-red-500 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-red-600 transition">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-blue-600" id="waterCount">0</div>
+                            <div class="text-sm text-gray-600">glasses</div>
+                            <div class="text-xs text-gray-500" id="waterTotal">0ml</div>
+                        </div>
+                        <button type="button" onclick="updateWaterIntake(1)" class="bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-green-600 transition">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Blood Sugar -->
                 <div class="bg-gray-50 p-4 rounded-lg">
                     <label class="block text-lg font-semibold mb-3 text-gray-700">
@@ -116,18 +136,36 @@
                         <i class="fas fa-pills mr-2"></i>Medication Taken
                     </label>
                     <div class="space-y-3">
-                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
-                            <input type="checkbox" id="medMorning" class="mr-3 w-5 h-5 text-blue-600">
-                            <span class="text-lg">Morning Medications</span>
-                        </label>
-                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
-                            <input type="checkbox" id="medNoon" class="mr-3 w-5 h-5 text-blue-600">
-                            <span class="text-lg">Noon Medications</span>
-                        </label>
-                        <label class="flex items-center p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition cursor-pointer">
-                            <input type="checkbox" id="medNight" class="mr-3 w-5 h-5 text-blue-600">
-                            <span class="text-lg">Night Medications</span>
-                        </label>
+                        <div class="bg-white p-3 rounded-lg border-2 border-gray-200">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="medMorning" onchange="updateMedTime('morning')" class="mr-3 w-5 h-5 text-blue-600">
+                                    <span class="text-lg">Morning Medications</span>
+                                </div>
+                                <div id="morningTime" class="text-sm text-gray-600">Not taken</div>
+                            </label>
+                            <input type="time" id="morningTimeManual" class="mt-2 w-full p-2 border rounded text-sm" placeholder="Manual time">
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border-2 border-gray-200">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="medNoon" onchange="updateMedTime('noon')" class="mr-3 w-5 h-5 text-blue-600">
+                                    <span class="text-lg">Noon Medications</span>
+                                </div>
+                                <div id="noonTime" class="text-sm text-gray-600">Not taken</div>
+                            </label>
+                            <input type="time" id="noonTimeManual" class="mt-2 w-full p-2 border rounded text-sm" placeholder="Manual time">
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border-2 border-gray-200">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="medNight" onchange="updateMedTime('night')" class="mr-3 w-5 h-5 text-blue-600">
+                                    <span class="text-lg">Night Medications</span>
+                                </div>
+                                <div id="nightTime" class="text-sm text-gray-600">Not taken</div>
+                            </label>
+                            <input type="time" id="nightTimeManual" class="mt-2 w-full p-2 border rounded text-sm" placeholder="Manual time">
+                        </div>
                     </div>
                 </div>
 
@@ -167,8 +205,8 @@
                     <i class="fas fa-chart-line mr-2"></i>
                     Health History
                 </h2>
-                <button onclick="exportToCSV()" class="btn-large bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-download mr-2"></i>Export CSV
+                <button onclick="exportToCSV()" class="btn-large bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                    <i class="fas fa-download mr-2"></i>Export CSV for Doctor
                 </button>
             </div>
 
