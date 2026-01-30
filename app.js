@@ -6,8 +6,8 @@ let sugarChart = null;
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     loadData();
-    updateWeddingCountdown();
-    setInterval(updateWeddingCountdown, 60000); // Update every minute
+    // updateWeddingCountdown(); // Commented out
+    // setInterval(updateWeddingCountdown, 60000); // Commented out
     
     // Set up form submission
     document.getElementById('healthForm').addEventListener('submit', handleSubmit);
